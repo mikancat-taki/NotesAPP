@@ -1,0 +1,19 @@
+<Window x:Class="NotesAppUI.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        Title="NotesApp" Height="400" Width="600">
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <TextBox x:Name="TitleBox" Margin="0,0,0,5" Height="30" PlaceholderText="タイトル"/>
+        <TextBox x:Name="NoteBox" Grid.Row="1" AcceptsReturn="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto"/>
+
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,5,0,0">
+            <Button Content="保存" Width="80" Margin="0,0,5,0" Click="Save_Click"/>
+            <Button Content="翻訳" Width="80" Click="Translate_Click"/>
+        </StackPanel>
+    </Grid>
+</Window>
