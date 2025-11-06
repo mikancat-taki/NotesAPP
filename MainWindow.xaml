@@ -1,36 +1,70 @@
-<Window x:Class="NotesApp.MainWindow"
-        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="NotesApp - 自動翻訳対応" Height="600" Width="900">
-    <Grid>
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="250"/>
-            <ColumnDefinition Width="*"/>
-        </Grid.ColumnDefinitions>
+using System;
+using System.Windows;
+using System.Collections.ObjectModel;
+using System.Linq;
+using System.Threading.Tasks;
 
-        <!-- ノート一覧 -->
-        <StackPanel Grid.Column="0" Background="#fafafa">
-            <TextBox x:Name="SearchBox" Margin="8" PlaceholderText="検索..." />
-            <ListBox x:Name="NotesList" Margin="8" DisplayMemberPath="Title" />
-            <Button x:Name="NewBtn" Content="＋ 新規ノート" Margin="8"/>
-        </StackPanel>
+namespace NotesApp
+{
+    public partial class MainWindow : Window
+    {
+        private readonly ObservableCollection<NoteModel> notes = new();
+        private readonly TranslationService translator = new();
 
-        <!-- エディタ + 翻訳 -->
-        <DockPanel Grid.Column="1" Background="White">
-            <StackPanel Orientation="Horizontal" DockPanel.Dock="Top" HorizontalAlignment="Right">
-                <ComboBox x:Name="TargetLangBox" Width="120" Margin="8">
-                    <ComboBoxItem Content="英語 (en)" Tag="en"/>
-                    <ComboBoxItem Content="日本語 (ja)" Tag="ja"/>
-                    <ComboBoxItem Content="韓国語 (ko)" Tag="ko"/>
-                    <ComboBoxItem Content="中国語 (zh)" Tag="zh"/>
-                </ComboBox>
-                <Button x:Name="TranslateBtn" Content="🌐 自動翻訳" Margin="8"/>
-                <Button x:Name="SaveBtn" Content="💾 保存" Margin="8"/>
-            </StackPanel>
+        public MainWindow()
+        {
+            InitializeComponent();
+            NotesList.ItemsSource = notes;
+            NewBtn.Click += (_, __) => CreateNewNote();
+            SaveBtn.Click += (_, __) => SaveNote();
+            TranslateBtn.Click += async (_, __) => await AutoTranslateAsync();
+        }
 
-            <TextBox x:Name="TitleBox" FontSize="18" FontWeight="Bold" Margin="8" PlaceholderText="タイトルを入力"/>
-            <TextBox x:Name="BodyBox" AcceptsReturn="True" VerticalScrollBarVisibility="Auto"
-                     Margin="8" TextWrapping="Wrap" FontSize="14"/>
-        </DockPanel>
-    </Grid>
-</Window>
+        private void CreateNewNote()
+        {
+            TitleBox.Text = "";
+            BodyBox.Text = "";
+        }
+
+        private void SaveNote()
+        {
+            // 本来は C++ NoteStorage と連携して保存する
+            var n = new NoteModel
+            {
+                Title = TitleBox.Text,
+                Body = BodyBox.Text,
+                Date = DateTime.Now
+            };
+            notes.Add(n);
+            MessageBox.Show("保存しました。", "NotesApp");
+        }
+
+        private async Task AutoTranslateAsync()
+        {
+            string target = ((System.Windows.Controls.ComboBoxItem)TargetLangBox.SelectedItem)?.Tag?.ToString() ?? "en";
+            string src = DetectLanguage(BodyBox.Text); // 簡易判定
+            string result = await translator.TranslateAsync(BodyBox.Text, src, target);
+            if (!string.IsNullOrWhiteSpace(result))
+            {
+                var translatedNote = new NoteModel
+                {
+                    Title = TitleBox.Text + $"（翻訳:{target}）",
+                    Body = result,
+                    Date = DateTime.Now
+                };
+                notes.Add(translatedNote);
+                MessageBox.Show("翻訳が完了しました！", "翻訳結果");
+            }
+        }
+
+        // 超簡易な言語推定
+        private string DetectLanguage(string text)
+        {
+            if (string.IsNullOrWhiteSpace(text)) return "auto";
+            if (text.Any(c => c >= 0x3040 && c <= 0x30FF)) return "ja";
+            if (text.Any(c => c >= 0xAC00 && c <= 0xD7A3)) return "ko";
+            if (text.Any(c => c >= 0x4E00 && c <= 0x9FFF)) return "zh";
+            return "en";
+        }
+    }
+}
